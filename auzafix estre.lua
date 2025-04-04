@@ -384,7 +384,7 @@ local a = {
 
                                 if L:upgrade(aw) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | bought upgrade",
+                                        Title = "Auza Hub | bought upgrade",
                                         Content = string.format('upgrade %s is now level %s', tostring(av), tostring(ay)),
                                         Duration = 1.5
                                     }
@@ -455,7 +455,7 @@ local a = {
 
                                 if K:claim(an) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed crops",
+                                        Title = "Auza Hub | claimed crops",
                                         Content = string.format('%s has been claimed!', tostring(ao)),
                                         Duration = 1.5
                                     }
@@ -511,7 +511,7 @@ local a = {
 
                                     if K:buy(ao) == "success" then
                                         Z:Notify{
-                                            Title = "strelizia.cc | bought crop farm",
+                                            Title = "Auza Hub | bought crop farm",
                                             Content = string.format('%s has been bought!', tostring(ap)),
                                             Duration = 1.5
                                         }
@@ -541,7 +541,7 @@ local a = {
 
                                 if K:upgrade(ao) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | upgraded crop farm",
+                                        Title = "Auza Hub | upgraded crop farm",
                                         Content = string.format('%s has been upgraded to stage %s!', tostring(ap), tostring(ar)),
                                         Duration = 1.5
                                     }
@@ -581,7 +581,7 @@ local a = {
 
                                 if M:claimChest(ah) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed chest",
+                                        Title = "Auza Hub | claimed chest",
                                         Content = string.format('%s chest has been opened!', tostring(ah)),
                                         Duration = 1.5
                                     }
@@ -816,7 +816,7 @@ local a = {
 
                                 if M:claimPlaytimeReward(ar) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed playtime reward",
+                                        Title = "Auza Hub | claimed playtime reward",
                                         Content = string.format('claimed playtime reward no%s', tostring(ar)),
                                         Duration = 1.5
                                     }
@@ -826,7 +826,7 @@ local a = {
                             if (T.data.dayReset - os.time() + 86400) <= 0 then
                                 if M:claimDailyReward() == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed daily reward",
+                                        Title = "Auza Hub | claimed daily reward",
                                         Content = "todays daily reward has been claimed",
                                         Duration = 1.5
                                     }
@@ -846,7 +846,7 @@ local a = {
 
                                 if M:claimAchievement(ar) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed achievement",
+                                        Title = "Auza Hub | claimed achievement",
                                         Content = string.format('claimed achievement %s (tier %s)', tostring(ar), tostring(at)),
                                         Duration = 1.5
                                     }
@@ -881,7 +881,7 @@ local a = {
 
                                 if O:claimIndexReward(as) == "success" then
                                     Z:Notify{
-                                        Title = "strelizia.cc | claimed index reward",
+                                        Title = "Auza Hub | claimed index reward",
                                         Content = string.format('claimed index reawrd no%s', tostring(as)),
                                         Duration = 1.5
                                     }
@@ -918,7 +918,7 @@ local a = {
 
                             if P:claim() == "success" then
                                 Z:Notify{
-                                    Title = "strelizia.cc | prestiged",
+                                    Title = "Auza Hub | prestiged",
                                     Content = string.format('successfully prestiged to prestige %s', tostring(at)),
                                     Duration = 1.5
                                 }
@@ -940,7 +940,7 @@ local a = {
                 ab:SelectTab(1)
 
                 Z:Notify{
-                    Title = "strelizia.cc",
+                    Title = "Auza Hub",
                     Content = "script loaded, enjoy <3",
                     Duration = 5
                 }
