@@ -80,7 +80,7 @@ local a = {
             getgenv().Fluent = Z
 
             local ab = Z:CreateWindow{
-                Title = "strelizia.cc",
+                Title = "AuzaHub",
                 SubTitle = "v" .. s.LRM_ScriptVersion,
                 TabWidth = 120,
                 Size = UDim2.fromOffset(600, 480),
