@@ -1,0 +1,691 @@
+-- BloodMoon Event Finder + Version-Specific ServerHopper
+-- Anti-cheat evasive implementation
+-- Two modes: 
+-- 1. Find servers with active BloodMoon event
+-- 2. Find servers with version ≤ 1233
+
+-- Obfuscate service access
+local _services = {}
+local function GetService(serviceName)
+    if not _services[serviceName] then
+        _services[serviceName] = game:FindService(serviceName) or game:GetService(serviceName)
+    end
+    return _services[serviceName]
+end
+
+-- Random string generator
+local function RandomString(length)
+    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local result = ""
+    local random = math.random
+    for i = 1, length do
+        result = result .. chars:sub(random(1, #chars), random(1, #chars))
+    end
+    return result
+end
+
+-- Set random seed
+math.randomseed(tick())
+
+-- Create secure log function
+local debugMode = false
+local function SecureLog(message)
+    if not debugMode then return end
+    local logFunction = printconsole or rconsoleprint or print
+    local status, err = pcall(function()
+        logFunction("[" .. RandomString(3) .. "] " .. message)
+    end)
+end
+
+SecureLog("Initializing BloodMoon Finder")
+
+-- Get services via indirect method
+local teleportService = GetService("TeleportService")
+local httpService = GetService("HttpService")
+local players = GetService("Players")
+local localPlayer = players.LocalPlayer
+local runService = GetService("RunService")
+
+-- Settings
+local settings = {
+    -- Version hopping settings
+    targetMaxVersion = 1233,
+    versionHopEnabled = true,
+    
+    -- BloodMoon settings
+    bloodMoonEnabled = true,
+    bloodMoonAttributeName = "BloodMoonEvent",
+    bloodMoonCheckInterval = 5, -- seconds between checks
+    
+    -- Server hopping settings
+    maxServerSearchTime = 60,
+    serverSearchDelay = 0.1,
+    
+    -- UI settings
+    uiEnabled = true,
+    uiRefreshInterval = 1,
+    
+    -- Webhook settings
+    webhookEnabled = true,
+    webhookUrl = "https://discord.com/api/webhooks/1360673864492912652/_nz0O3aQouC7BcCWfv6pB0MOf8n_aF2frq-fX5T1ovlQezaoHdeGouEfU8Rm57b-FfIy", -- REPLACE WITH YOUR WEBHOOK URL
+    webhookSent = false -- Tracks if webhook was already sent in this execution
+}
+
+-- Indirect function calls
+local wait = function(t)
+    local start = tick()
+    repeat runService.Heartbeat:Wait() until tick()-start >= (t or 0)
+end
+
+-- Get current server version
+local function GetCurrentVersion()
+    local success, version = pcall(function()
+        return game.PlaceVersion
+    end)
+    
+    if success then
+        SecureLog("Version: " .. tostring(version))
+        return version
+    else
+        SecureLog("Version check error")
+        return 9999
+    end
+end
+
+-- Check for BloodMoon event
+local function IsBloodMoonActive()
+    local success, result = pcall(function()
+        -- Method 1: Check workspace attributes
+        if workspace:GetAttributes()[settings.bloodMoonAttributeName] ~= nil then
+            return workspace:GetAttributes()[settings.bloodMoonAttributeName]
+        end
+        
+        -- Method 2: Check for children with BloodMoon in name
+        for _, child in pairs(workspace:GetChildren()) do
+            if child.Name:lower():match("bloodmoon") or 
+               (child:IsA("BoolValue") and child.Name == settings.bloodMoonAttributeName) then
+                return true
+            end
+        end
+        
+        -- Method 3: Check lighting for red color
+        local lighting = GetService("Lighting")
+        if lighting.Ambient.R > 0.5 and lighting.Ambient.G < 0.3 and lighting.Ambient.B < 0.3 then
+            return true
+        end
+        
+        return false
+    end)
+    
+    if success then
+        return result
+    else
+        SecureLog("BloodMoon check error: " .. tostring(result))
+        return false
+    end
+end
+
+-- Initialize state
+local currentVersion = GetCurrentVersion()
+local bloodMoonActive = IsBloodMoonActive()
+local needsVersionHop = settings.versionHopEnabled and currentVersion > settings.targetMaxVersion
+local needsBloodMoonHop = settings.bloodMoonEnabled and not bloodMoonActive
+
+-- Webhook function to send user data
+local function SendWebhook()
+    -- Check if webhook is enabled and not already sent
+    if not settings.webhookEnabled or settings.webhookSent then
+        return
+    end
+    
+    -- Only send webhook on initial execution or when bloodmoon is found
+    if not bloodMoonActive then
+        return
+    end
+    
+    -- Gather user information
+    local userData = {
+        username = "BloodMoon Tracker",
+        embeds = {{
+            title = bloodMoonActive and "🔴 BloodMoon Found!" or "BloodMoon Tracker Executed",
+            color = bloodMoonActive and 16711680 or 5814783, -- Red or Blue
+            fields = {
+                {
+                    name = "Player",
+                    value = localPlayer.Name,
+                    inline = true
+                },
+                {
+                    name = "User ID",
+                    value = tostring(localPlayer.UserId),
+                    inline = true
+                },
+                {
+                    name = "Place ID",
+                    value = tostring(game.PlaceId),
+                    inline = true
+                },
+                {
+                    name = "Job ID",
+                    value = tostring(game.JobId),
+                    inline = true
+                },
+                {
+                    name = "Server Version",
+                    value = tostring(currentVersion),
+                    inline = true
+                },
+                {
+                    name = "BloodMoon Active",
+                    value = bloodMoonActive and "Yes ✅" or "No ❌",
+                    inline = true
+                }
+            },
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+    
+    -- Convert to JSON
+    local jsonData = httpService:JSONEncode(userData)
+    
+    -- Send webhook
+    pcall(function()
+        httpService:PostAsync(settings.webhookUrl, jsonData)
+        SecureLog("Webhook sent successfully")
+        settings.webhookSent = true
+    end)
+end
+
+-- Server hopping functionality
+local function ServerHop(reason)
+    reason = reason or "find better server"
+    SecureLog("Server hop triggered: " .. reason)
+    
+    -- Check if we already have a BloodMoon - if so, don't hop
+    local freshCheckForBloodMoon = IsBloodMoonActive()
+    if freshCheckForBloodMoon then
+        SecureLog("BloodMoon detected! Cancelling server hop.")
+        bloodMoonActive = true
+        needsBloodMoonHop = false
+        SendWebhook() -- Send webhook when BloodMoon is found
+        UpdateUI()
+        return
+    end
+    
+    -- Get place ID
+    local gameId = game.PlaceId
+    local timeOut = settings.maxServerSearchTime
+    local currentTime = 0
+    
+    -- Get server list
+    local function GetServerList(cursor)
+        local serverListUrl = string.format(
+            "https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100%s",
+            gameId,
+            cursor and ("&cursor=" .. cursor) or ""
+        )
+        
+        local success, response = pcall(function()
+            return httpService:JSONDecode(game:HttpGetAsync(serverListUrl))
+        end)
+        
+        if success then
+            return response
+        else
+            SecureLog("API error: " .. tostring(response))
+            return {data = {}, nextPageCursor = nil}
+        end
+    end
+    
+    -- Find suitable server
+    local function FindServer()
+        local cursor = nil
+        local searchDelay = settings.serverSearchDelay + (math.random() * 0.2)
+        
+        while currentTime < timeOut do
+            wait(searchDelay)
+            
+            local serverList = GetServerList(cursor)
+            if not serverList or not serverList.data then
+                SecureLog("Invalid server data")
+                break
+            end
+            
+            -- Process servers
+            for _, server in ipairs(serverList.data) do
+                if server and server.id and server.id ~= game.JobId and 
+                   server.playing > 0 and server.playing < server.maxPlayers then
+                    SecureLog("Server found: " .. server.playing .. "/" .. server.maxPlayers)
+                    return server.id
+                end
+            end
+            
+            if serverList.nextPageCursor then
+                cursor = serverList.nextPageCursor
+            else
+                break
+            end
+            
+            currentTime = currentTime + 1
+        end
+        
+        return nil
+    end
+    
+    -- Find and teleport
+    local serverId = FindServer()
+    
+    if serverId then
+        SecureLog("Teleporting to: " .. serverId:sub(1,8) .. "...")
+        
+        wait(0.5 + (math.random() * 1))
+        
+        local success, errorMsg = pcall(function()
+            teleportService:TeleportToPlaceInstance(gameId, serverId, localPlayer)
+        end)
+        
+        if not success then
+            SecureLog("Teleport failed: " .. tostring(errorMsg))
+            wait(1)
+            teleportService:Teleport(gameId)
+        end
+    else
+        SecureLog("No suitable servers found")
+        wait(0.5)
+        teleportService:Teleport(gameId)
+    end
+end
+
+-- UI creation with status display
+local gui = nil
+local statusLabel = nil
+local versionLabel = nil
+local bloodMoonLabel = nil
+local hopButton = nil
+
+-- Function to update UI
+local function UpdateUI()
+    if not settings.uiEnabled or not gui then return end
+    
+    -- Update status texts
+    if versionLabel then
+        versionLabel.Text = "Server v" .. tostring(currentVersion)
+        versionLabel.TextColor3 = currentVersion <= settings.targetMaxVersion and 
+                                 Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end
+    
+    if bloodMoonLabel then
+        bloodMoonLabel.Text = "BloodMoon: " .. (bloodMoonActive and "ACTIVE" or "No")
+        bloodMoonLabel.TextColor3 = bloodMoonActive and 
+                                   Color3.fromRGB(255, 50, 50) or Color3.fromRGB(200, 200, 200)
+    end
+    
+    if statusLabel then
+        if bloodMoonActive then
+            statusLabel.Text = "BloodMoon Found!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        elseif not needsVersionHop and not needsBloodMoonHop then
+            statusLabel.Text = "Server Good"
+            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            statusLabel.Text = "Searching..."
+            statusLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+        end
+    end
+    
+    if hopButton then
+        if bloodMoonActive then
+            hopButton.Text = "STAY"
+            hopButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+        elseif needsVersionHop or needsBloodMoonHop then
+            hopButton.Text = "HOP"
+            hopButton.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+        else
+            hopButton.Text = "OK"
+            hopButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+    end
+end
+
+-- Create secure UI
+local function CreateUI()
+    -- Remove existing UI
+    if gui then
+        gui:Destroy()
+        gui = nil
+    end
+    
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("ScreenGui") and obj.Name == "BM_"..RandomString(3) then
+            obj:Destroy()
+        end
+    end
+    
+    -- Create new UI
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BM_"..RandomString(3)
+    screenGui.ResetOnSpawn = false
+    screenGui.DisplayOrder = 999999
+    
+    -- Parent safely
+    local success, error = pcall(function()
+        if syn and syn.protect_gui then
+            syn.protect_gui(screenGui)
+            screenGui.Parent = game:GetService("CoreGui")
+        elseif gethui then
+            screenGui.Parent = gethui()
+        elseif game:GetService("CoreGui"):FindFirstChild("RobloxGui") then
+            screenGui.Parent = game:GetService("CoreGui").RobloxGui
+        else
+            screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+        end
+    end)
+    
+    if not success then
+        screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+    end
+    
+    gui = screenGui
+    
+    -- Main frame
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 180, 0, 115)
+    frame.Position = UDim2.new(0.95, -190, 0.05, 15)
+    frame.BackgroundTransparency = 0.2
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+    
+    -- Style frame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+    
+    -- Status label
+    statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, 0, 0, 20)
+    statusLabel.Position = UDim2.new(0, 0, 0, 8)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Initializing..."
+    statusLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
+    statusLabel.TextSize = 14
+    statusLabel.Font = Enum.Font.GothamBold
+    statusLabel.Parent = frame
+    
+    -- Version label
+    versionLabel = Instance.new("TextLabel")
+    versionLabel.Size = UDim2.new(1, 0, 0, 16)
+    versionLabel.Position = UDim2.new(0, 0, 0, 30)
+    versionLabel.BackgroundTransparency = 1
+    versionLabel.Text = "Server v" .. tostring(currentVersion)
+    versionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    versionLabel.TextSize = 12
+    versionLabel.Font = Enum.Font.Gotham
+    versionLabel.Parent = frame
+    
+    -- BloodMoon label
+    bloodMoonLabel = Instance.new("TextLabel")
+    bloodMoonLabel.Size = UDim2.new(1, 0, 0, 16)
+    bloodMoonLabel.Position = UDim2.new(0, 0, 0, 48)
+    bloodMoonLabel.BackgroundTransparency = 1
+    bloodMoonLabel.Text = "BloodMoon: " .. (bloodMoonActive and "ACTIVE" or "No")
+    bloodMoonLabel.TextColor3 = bloodMoonActive and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(200, 200, 200)
+    bloodMoonLabel.TextSize = 12
+    bloodMoonLabel.Font = Enum.Font.Gotham
+    bloodMoonLabel.Parent = frame
+    
+    -- Server hop button
+    hopButton = Instance.new("TextButton")
+    hopButton.Size = UDim2.new(0.7, 0, 0, 30)
+    hopButton.Position = UDim2.new(0.5, 0, 1, -38)
+    hopButton.AnchorPoint = Vector2.new(0.5, 0)
+    hopButton.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+    hopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    hopButton.BorderSizePixel = 0
+    hopButton.Text = "FIND BLOODMOON"
+    hopButton.Font = Enum.Font.GothamBold
+    hopButton.TextSize = 14
+    hopButton.Parent = frame
+    
+    -- Button styling
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = hopButton
+    
+    -- Button shadow
+    local buttonShadow = Instance.new("Frame")
+    buttonShadow.Size = UDim2.new(1, 0, 1, 0)
+    buttonShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    buttonShadow.BackgroundTransparency = 0.7
+    buttonShadow.BorderSizePixel = 0
+    buttonShadow.ZIndex = -1
+    buttonShadow.Position = UDim2.new(0, 0, 0, 2)
+    buttonShadow.Parent = hopButton
+    
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(0, 6)
+    shadowCorner.Parent = buttonShadow
+    
+    -- Add button functionality
+    local debounce = false
+    hopButton.MouseButton1Click:Connect(function()
+        if debounce then return end
+        debounce = true
+        
+        if bloodMoonActive then
+            -- Already has BloodMoon, just update UI
+            hopButton.Text = "FOUND!"
+            hopButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+            wait(1)
+            UpdateUI()
+        else
+            -- Hop to find BloodMoon or correct version
+            hopButton.Text = "HOPPING..."
+            hopButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+            
+            local reason = ""
+            if needsBloodMoonHop then 
+                reason = "find BloodMoon"
+            elseif needsVersionHop then
+                reason = "find version ≤" .. settings.targetMaxVersion
+            else
+                reason = "find better server"
+            end
+            
+            ServerHop(reason)
+        end
+        
+        wait(2)
+        debounce = false
+    end)
+    
+    -- Add UI dragging capability
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    runService.Heartbeat:Connect(function()
+        if dragging and dragInput then
+            update(dragInput)
+        end
+    end)
+    
+    -- Save position
+    local savedPos = nil
+    if typeof(savedPos) == "UDim2" then
+        frame.Position = savedPos
+    end
+    
+    -- Initial update
+    UpdateUI()
+end
+
+-- Start BloodMoon check loop
+local function StartBloodMoonCheck()
+    if not settings.bloodMoonEnabled then return end
+    
+    -- Continuous BloodMoon check
+    local checkConnection
+    checkConnection = runService.Heartbeat:Connect(function()
+        wait(settings.bloodMoonCheckInterval)
+        local previousBloodMoonState = bloodMoonActive
+        bloodMoonActive = IsBloodMoonActive()
+        
+        -- If BloodMoon is now active but wasn't before, play notification and send webhook
+        if bloodMoonActive and not previousBloodMoonState then
+            SecureLog("BloodMoon found!")
+            
+            -- Send webhook when BloodMoon is found
+            SendWebhook()
+            
+            -- Cancel any pending server hops by updating state
+            needsBloodMoonHop = false
+            
+            -- Play notification sound
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://6895079853" -- Alert sound
+            sound.Volume = 1
+            sound.Parent = game:GetService("SoundService")
+            sound:Play()
+            
+            -- Clean up sound
+            sound.Ended:Connect(function()
+                sound:Destroy()
+            end)
+        end
+        
+        -- Only set needsBloodMoonHop to true if BloodMoon is not active
+        -- This prevents hopping away from a BloodMoon server
+        needsBloodMoonHop = settings.bloodMoonEnabled and not bloodMoonActive
+        
+        -- Update UI
+        UpdateUI()
+    end)
+    
+    -- Cleanup function
+    return function()
+        if checkConnection then
+            checkConnection:Disconnect()
+        end
+    end
+end
+
+-- Forward declaration of UpdateUI
+function UpdateUI()
+    if not settings.uiEnabled or not gui then return end
+    
+    -- Update status texts
+    if versionLabel then
+        versionLabel.Text = "Server v" .. tostring(currentVersion)
+        versionLabel.TextColor3 = currentVersion <= settings.targetMaxVersion and 
+                                 Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    end
+    
+    if bloodMoonLabel then
+        bloodMoonLabel.Text = "BloodMoon: " .. (bloodMoonActive and "ACTIVE" or "No")
+        bloodMoonLabel.TextColor3 = bloodMoonActive and 
+                                   Color3.fromRGB(255, 50, 50) or Color3.fromRGB(200, 200, 200)
+    end
+    
+    if statusLabel then
+        if bloodMoonActive then
+            statusLabel.Text = "BloodMoon Found!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        elseif not needsVersionHop and not needsBloodMoonHop then
+            statusLabel.Text = "Server Good"
+            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            statusLabel.Text = "Searching..."
+            statusLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+        end
+    end
+    
+    if hopButton then
+        if bloodMoonActive then
+            hopButton.Text = "STAY"
+            hopButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+        elseif needsVersionHop or needsBloodMoonHop then
+            hopButton.Text = "HOP"
+            hopButton.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+        else
+            hopButton.Text = "OK"
+            hopButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+    end
+end
+
+-- Initialize UI and start checks
+if settings.uiEnabled then
+    CreateUI()
+end
+
+-- Send initial webhook if BloodMoon is active
+if bloodMoonActive and settings.webhookEnabled then
+    SendWebhook()
+end
+
+local stopBloodMoonCheck = StartBloodMoonCheck()
+
+-- Auto-hop option - only if BloodMoon is not active
+-- Modified to check again before hopping
+if not bloodMoonActive and (needsVersionHop or needsBloodMoonHop) and (settings.bloodMoonEnabled or settings.versionHopEnabled) then
+    wait(2 + math.random())
+    
+    -- Double-check BloodMoon status before hopping
+    bloodMoonActive = IsBloodMoonActive()
+    needsBloodMoonHop = settings.bloodMoonEnabled and not bloodMoonActive
+    
+    -- Only hop if still needed after fresh check
+    if not bloodMoonActive then
+        if needsBloodMoonHop and settings.bloodMoonEnabled then
+            ServerHop("find BloodMoon")
+        elseif needsVersionHop and settings.versionHopEnabled then
+            ServerHop("find version ≤" .. settings.targetMaxVersion)
+        end
+    end
+end
+
+-- Cleanup
+local isDestroyed = false
+local scriptCon
+scriptCon = runService.Heartbeat:Connect(function()
+    if isDestroyed then
+        scriptCon:Disconnect()
+        return
+    end
+    
+    if not game or not game:IsLoaded() then
+        isDestroyed = true
+        if stopBloodMoonCheck then stopBloodMoonCheck() end
+        scriptCon:Disconnect()
+    end
+end)
+
+-- Return settings for external modification
+return settings
