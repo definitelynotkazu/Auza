@@ -1,0 +1,389 @@
+-- BloodMoon Key System
+-- Secure key verification with local storage and script execution
+
+-- Obfuscate service access
+local _services = {}
+local function GetService(serviceName)
+    if not _services[serviceName] then
+        _services[serviceName] = game:FindService(serviceName) or game:GetService(serviceName)
+    end
+    return _services[serviceName]
+end
+
+-- Random string generator
+local function RandomString(length)
+    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local result = ""
+    local random = math.random
+    for i = 1, length do
+        result = result .. chars:sub(random(1, #chars), random(1, #chars))
+    end
+    return result
+end
+
+-- Set random seed
+math.randomseed(tick())
+
+-- Get Services
+local players = GetService("Players")
+local httpService = GetService("HttpService")
+local localPlayer = players.LocalPlayer
+local runService = GetService("RunService")
+local CoreGui = GetService("CoreGui")
+local TweenService = GetService("TweenService")
+
+-- Secure functions
+local function SecureExecute(code)
+    local func, err = loadstring(code)
+    if func then
+        return pcall(func)
+    else
+        return false, err
+    end
+end
+
+local function SecureHttpGet(url)
+    local success, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if success then
+        return result
+    else
+        -- Fallback methods if direct HttpGet fails
+        local httpGetMethods = {
+            function() return game:HttpGet(url) end,
+            function() return game:GetService("HttpService"):GetAsync(url) end,
+            function() return request({Url = url, Method = "GET"}).Body end,
+        }
+        
+        for _, method in ipairs(httpGetMethods) do
+            success, result = pcall(method)
+            if success then
+                return result
+            end
+        end
+        
+        return nil
+    end
+end
+
+-- Constants
+local SCRIPT_URL = "https://raw.githubusercontent.com/definitelynotkazu/Auza/refs/heads/main/OldServerHopper"
+local KEY_FILE_NAME = "BloodMoon_Key.dat"
+local VALID_KEYS = {
+    "BLOODMOON2025", -- Example key, replace with your actual keys
+    "AUZASCRIPT",
+    "MOONHUNTER"
+}
+
+-- Data Handling Functions
+local function SaveKey(key)
+    local success, result = pcall(function()
+        if writefile then
+            local encryptedKey = ""
+            for i = 1, #key do
+                local char = string.byte(key:sub(i, i))
+                encryptedKey = encryptedKey .. string.char((char + 5) % 256)
+            end
+            writefile(KEY_FILE_NAME, encryptedKey)
+            return true
+        end
+        return false
+    end)
+    
+    return success and result or false
+end
+
+local function LoadKey()
+    local success, result = pcall(function()
+        if readfile and isfile and isfile(KEY_FILE_NAME) then
+            local encryptedKey = readfile(KEY_FILE_NAME)
+            local key = ""
+            for i = 1, #encryptedKey do
+                local char = string.byte(encryptedKey:sub(i, i))
+                key = key .. string.char((char - 5) % 256)
+            end
+            return key
+        end
+        return nil
+    end)
+    
+    return success and result or nil
+end
+
+local function ValidateKey(key)
+    if not key or key == "" then return false end
+    
+    -- Check against valid keys
+    for _, validKey in ipairs(VALID_KEYS) do
+        if key == validKey then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- UI Functions
+local keySystemUI = nil
+local function CreateKeySystemUI()
+    -- Destroy any existing UI
+    if keySystemUI then
+        keySystemUI:Destroy()
+    end
+    
+    -- Create ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "KeySystem_" .. RandomString(8)
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.ResetOnSpawn = false
+    
+    -- Try using CoreGui
+    local success, result = pcall(function()
+        if syn and syn.protect_gui then
+            syn.protect_gui(screenGui)
+            screenGui.Parent = CoreGui
+        elseif gethui then
+            screenGui.Parent = gethui()
+        else
+            screenGui.Parent = CoreGui
+        end
+    end)
+    
+    if not success then
+        screenGui.Parent = player.PlayerGui
+    end
+    
+    keySystemUI = screenGui
+    
+    -- Main Frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 300, 0, 200)
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Name = "MainFrame"
+    mainFrame.Parent = screenGui
+    
+    -- Add Corner Radius
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 10)
+    uiCorner.Parent = mainFrame
+    
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 40)
+    titleLabel.Position = UDim2.new(0, 0, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "BloodMoon Key System"
+    titleLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Parent = mainFrame
+    
+    -- Subtitle
+    local subtitleLabel = Instance.new("TextLabel")
+    subtitleLabel.Size = UDim2.new(1, 0, 0, 20)
+    subtitleLabel.Position = UDim2.new(0, 0, 0, 40)
+    subtitleLabel.BackgroundTransparency = 1
+    subtitleLabel.Text = "Enter your key to access the script"
+    subtitleLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    subtitleLabel.TextSize = 12
+    subtitleLabel.Font = Enum.Font.Gotham
+    subtitleLabel.Parent = mainFrame
+    
+    -- Key Input
+    local keyInput = Instance.new("TextBox")
+    keyInput.Size = UDim2.new(0.8, 0, 0, 35)
+    keyInput.Position = UDim2.new(0.1, 0, 0.4, 0)
+    keyInput.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+    keyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyInput.PlaceholderText = "Enter Key..."
+    keyInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    keyInput.Text = ""
+    keyInput.TextSize = 14
+    keyInput.Font = Enum.Font.Gotham
+    keyInput.ClearTextOnFocus = false
+    keyInput.Parent = mainFrame
+    
+    -- Round key input
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = keyInput
+    
+    -- Status Label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(0.8, 0, 0, 20)
+    statusLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = ""
+    statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    statusLabel.TextSize = 12
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.Parent = mainFrame
+    
+    -- Submit Button
+    local submitButton = Instance.new("TextButton")
+    submitButton.Size = UDim2.new(0.6, 0, 0, 35)
+    submitButton.Position = UDim2.new(0.2, 0, 0.75, 0)
+    submitButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submitButton.Text = "Submit"
+    submitButton.TextSize = 14
+    submitButton.Font = Enum.Font.GothamBold
+    submitButton.Parent = mainFrame
+    
+    -- Round submit button
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = submitButton
+    
+    -- Button hover effect
+    local originalColor = submitButton.BackgroundColor3
+    local hoverColor = Color3.fromRGB(240, 70, 70)
+    
+    submitButton.MouseEnter:Connect(function()
+        TweenService:Create(submitButton, TweenInfo.new(0.3), {BackgroundColor3 = hoverColor}):Play()
+    end)
+    
+    submitButton.MouseLeave:Connect(function()
+        TweenService:Create(submitButton, TweenInfo.new(0.3), {BackgroundColor3 = originalColor}):Play()
+    end)
+    
+    -- Make UI draggable
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    
+    mainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    mainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            updateDrag(input)
+        end
+    end)
+    
+    -- Handle key verification
+    local function verifyKey()
+        local inputKey = keyInput.Text
+        
+        -- Show loading state
+        statusLabel.Text = "Verifying key..."
+        statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        
+        -- Add a slight delay to make it feel like it's actually checking
+        wait(0.5 + math.random())
+        
+        if ValidateKey(inputKey) then
+            -- Verified successfully
+            statusLabel.Text = "Key verified! Loading script..."
+            statusLabel.TextColor3 = Color3.fromRGB(90, 220, 90)
+            
+            -- Save the key for future use
+            SaveKey(inputKey)
+            
+            -- Close UI with a nice animation
+            TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -150, 1.5, 0)}):Play()
+            
+            -- Load and execute the script
+            wait(1)
+            
+            local scriptContent = SecureHttpGet(SCRIPT_URL)
+            if scriptContent then
+                SecureExecute(scriptContent)
+                keySystemUI:Destroy()
+                keySystemUI = nil
+            else
+                statusLabel.Text = "Error fetching script!"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                wait(2)
+                
+                -- Reset UI
+                TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = UDim2.new(0.5, -150, 0.5, -100)}):Play()
+            end
+        else
+            -- Invalid key
+            statusLabel.Text = "Invalid key! Please try again."
+            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            
+            -- Shake effect for invalid key
+            local originalPosition = mainFrame.Position
+            local strength = 5
+            
+            for i = 1, 3 do
+                TweenService:Create(mainFrame, TweenInfo.new(0.1), {Position = UDim2.new(originalPosition.X.Scale, originalPosition.X.Offset + strength, originalPosition.Y.Scale, originalPosition.Y.Offset)}):Play()
+                wait(0.1)
+                TweenService:Create(mainFrame, TweenInfo.new(0.1), {Position = UDim2.new(originalPosition.X.Scale, originalPosition.X.Offset - strength, originalPosition.Y.Scale, originalPosition.Y.Offset)}):Play()
+                wait(0.1)
+            end
+            
+            TweenService:Create(mainFrame, TweenInfo.new(0.1), {Position = originalPosition}):Play()
+        end
+    end
+    
+    -- Connect button click
+    submitButton.MouseButton1Click:Connect(verifyKey)
+    
+    -- Connect Enter key press
+    keyInput.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            verifyKey()
+        end
+    end)
+    
+    -- Entrance animation
+    mainFrame.Position = UDim2.new(0.5, -150, -0.5, -100)
+    TweenService:Create(mainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -150, 0.5, -100)}):Play()
+    
+    return keyInput, statusLabel
+end
+
+-- Main execution
+local function Main()
+    -- Check if we have a saved key
+    local savedKey = LoadKey()
+    
+    if savedKey and ValidateKey(savedKey) then
+        -- We have a valid saved key, execute the script directly
+        local scriptContent = SecureHttpGet(SCRIPT_URL)
+        if scriptContent then
+            SecureExecute(scriptContent)
+        else
+            -- If script fetch fails, show UI
+            local keyInput, statusLabel = CreateKeySystemUI()
+            statusLabel.Text = "Error loading script, please try again"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        end
+    else
+        -- No valid saved key, show the key system UI
+        CreateKeySystemUI()
+    end
+end
+
+-- Run the system
+Main()
