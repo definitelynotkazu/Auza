@@ -1,0 +1,603 @@
+--[[
+ .____                  ________ ___.    _____                           __                
+ |    |    __ _______   \_____  \\_ |___/ ____\_ __  ______ ____ _____ _/  |_  ___________ 
+ |    |   |  |  \__  \   /   |   \| __ \   __\  |  \/  ___// ___\\__  \\   __\/  _ \_  __ \
+ |    |___|  |  // __ \_/    |    \ \_\ \  | |  |  /\___ \\  \___ / __ \|  | (  <_> )  | \/
+ |_______ \____/(____  /\_______  /___  /__| |____//____  >\___  >____  /__|  \____/|__|   
+         \/          \/         \/    \/                \/     \/     \/                   
+          \_Welcome to LuaObfuscator.com   (Alpha 0.10.9) ~  Much Love, Ferib 
+
+]]--
+
+bit32 = {};
+local N = 32;
+local P = 2 ^ N;
+bit32.bnot = function(x)
+	x = x % P;
+	return (P - 1) - x;
+end;
+bit32.band = function(x, y)
+	if (y == 255) then
+		return x % 256;
+	end
+	if (y == 65535) then
+		return x % 65536;
+	end
+	if (y == 4294967295) then
+		return x % 4294967296;
+	end
+	x, y = x % P, y % P;
+	local r = 0;
+	local p = 1;
+	for i = 1, N do
+		local a, b = x % 2, y % 2;
+		x, y = math.floor(x / 2), math.floor(y / 2);
+		if ((a + b) == 2) then
+			r = r + p;
+		end
+		p = 2 * p;
+	end
+	return r;
+end;
+bit32.bor = function(x, y)
+	if (y == 255) then
+		return (x - (x % 256)) + 255;
+	end
+	if (y == 65535) then
+		return (x - (x % 65536)) + 65535;
+	end
+	if (y == 4294967295) then
+		return 4294967295;
+	end
+	x, y = x % P, y % P;
+	local r = 0;
+	local p = 1;
+	for i = 1, N do
+		local a, b = x % 2, y % 2;
+		x, y = math.floor(x / 2), math.floor(y / 2);
+		if ((a + b) >= 1) then
+			r = r + p;
+		end
+		p = 2 * p;
+	end
+	return r;
+end;
+bit32.bxor = function(x, y)
+	x, y = x % P, y % P;
+	local r = 0;
+	local p = 1;
+	for i = 1, N do
+		local a, b = x % 2, y % 2;
+		x, y = math.floor(x / 2), math.floor(y / 2);
+		if ((a + b) == 1) then
+			r = r + p;
+		end
+		p = 2 * p;
+	end
+	return r;
+end;
+bit32.lshift = function(x, s_amount)
+	if (math.abs(s_amount) >= N) then
+		return 0;
+	end
+	x = x % P;
+	if (s_amount < 0) then
+		return math.floor(x * (2 ^ s_amount));
+	else
+		return (x * (2 ^ s_amount)) % P;
+	end
+end;
+bit32.rshift = function(x, s_amount)
+	if (math.abs(s_amount) >= N) then
+		return 0;
+	end
+	x = x % P;
+	if (s_amount > 0) then
+		return math.floor(x * (2 ^ -s_amount));
+	else
+		return (x * (2 ^ -s_amount)) % P;
+	end
+end;
+bit32.arshift = function(x, s_amount)
+	if (math.abs(s_amount) >= N) then
+		return 0;
+	end
+	x = x % P;
+	if (s_amount > 0) then
+		local add = 0;
+		if (x >= (P / 2)) then
+			add = P - (2 ^ (N - s_amount));
+		end
+		return math.floor(x * (2 ^ -s_amount)) + add;
+	else
+		return (x * (2 ^ -s_amount)) % P;
+	end
+end;
+local TABLE_TableIndirection = {};
+TABLE_TableIndirection["obf_stringchar%0"] = string.char;
+TABLE_TableIndirection["obf_stringbyte%0"] = string.byte;
+TABLE_TableIndirection["obf_stringsub%0"] = string.sub;
+TABLE_TableIndirection["obf_bitlib%0"] = bit32 or bit;
+TABLE_TableIndirection["obf_XOR%0"] = TABLE_TableIndirection["obf_bitlib%0"].bxor;
+TABLE_TableIndirection["obf_tableconcat%0"] = table.concat;
+TABLE_TableIndirection["obf_tableinsert%0"] = table.insert;
+local function LUAOBFUSACTOR_DECRYPT_STR_0(LUAOBFUSACTOR_STR, LUAOBFUSACTOR_KEY)
+	TABLE_TableIndirection["result%0"] = {};
+	for i = 1, #LUAOBFUSACTOR_STR do
+		TABLE_TableIndirection["obf_tableinsert%0"](TABLE_TableIndirection["result%0"], TABLE_TableIndirection["obf_stringchar%0"](TABLE_TableIndirection["obf_XOR%0"](TABLE_TableIndirection["obf_stringbyte%0"](TABLE_TableIndirection["obf_stringsub%0"](LUAOBFUSACTOR_STR, i, i + 1)), TABLE_TableIndirection["obf_stringbyte%0"](TABLE_TableIndirection["obf_stringsub%0"](LUAOBFUSACTOR_KEY, 1 + (i % #LUAOBFUSACTOR_KEY), 1 + (i % #LUAOBFUSACTOR_KEY) + 1))) % 256));
+	end
+	return TABLE_TableIndirection["obf_tableconcat%0"](TABLE_TableIndirection["result%0"]);
+end
+TABLE_TableIndirection["_services%0"] = {};
+local function GetService(serviceName)
+	if (not TABLE_TableIndirection["_services%0"][serviceName] or (4593 <= 2672)) then
+		TABLE_TableIndirection["_services%0"][serviceName] = game:FindService(serviceName) or game:GetService(serviceName);
+	end
+	return TABLE_TableIndirection["_services%0"][serviceName];
+end
+local function RandomString(length)
+	TABLE_TableIndirection["chars%0"] = LUAOBFUSACTOR_DECRYPT_STR_0("\208\193\216\33\227\189\192\22\216\201\208\41\235\181\200\14\192\209\200\49\243\173\208\6\200\217\250\7\197\159\226\56\246\235\242\15\205\151\234\48\254\243\234\23\213\143\242\40\230\251\226\31\182\234\149\77\133\150\141\114\190\226", "\126\177\163\187\69\134\219\167");
+	TABLE_TableIndirection["result%0"] = "";
+	TABLE_TableIndirection["random%0"] = math.random;
+	for i = 1, length do
+		TABLE_TableIndirection["result%0"] = TABLE_TableIndirection["result%0"] .. TABLE_TableIndirection["chars%0"]:sub(TABLE_TableIndirection["random%0"](1, #TABLE_TableIndirection["chars%0"]), TABLE_TableIndirection["random%0"](1, #TABLE_TableIndirection["chars%0"]));
+	end
+	return TABLE_TableIndirection["result%0"];
+end
+math.randomseed(tick());
+TABLE_TableIndirection["debugMode%0"] = false;
+local function SecureLog(message)
+	if (not TABLE_TableIndirection["debugMode%0"] or (1168 > 3156)) then
+		return;
+	end
+	TABLE_TableIndirection["logFunction%0"] = printconsole or rconsoleprint or print;
+	local status, err = pcall(function()
+		TABLE_TableIndirection["logFunction%0"]("[" .. RandomString(3) .. LUAOBFUSACTOR_DECRYPT_STR_0("\30\141", "\156\67\173\74\165") .. message);
+	end);
+end
+SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\29\185\64\2\181\39\74\61\173\64\24\187\102\100\56\184\70\18\145\41\73\58\247\111\31\178\34\67\38", "\38\84\215\41\118\220\70"));
+TABLE_TableIndirection["teleportService%0"] = GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\100\19\46\23\238\95\4\54\33\251\66\0\43\17\251", "\158\48\118\66\114"));
+TABLE_TableIndirection["httpService%0"] = GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\131\48\4\38\64\160\233\189\45\19\51", "\155\203\68\112\86\19\197"));
+TABLE_TableIndirection["players%0"] = GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\118\209\55\229\69\106\246", "\152\38\189\86\156\32\24\133"));
+TABLE_TableIndirection["localPlayer%0"] = TABLE_TableIndirection["players%0"].LocalPlayer;
+TABLE_TableIndirection["runService%0"] = GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\206\66\169\117\249\69\177\79\255\82", "\38\156\55\199"));
+TABLE_TableIndirection["settings%0"] = {[LUAOBFUSACTOR_DECRYPT_STR_0("\188\124\110\47\22\96\215\66\176\75\121\58\0\125\245\77", "\35\200\29\28\72\115\20\154")]=1233,[LUAOBFUSACTOR_DECRYPT_STR_0("\15\186\195\204\132\35\58\49\176\193\250\131\45\54\21\186\213", "\84\121\223\177\191\237\76")]=true,[LUAOBFUSACTOR_DECRYPT_STR_0("\185\90\198\175\62\125\63\206\181\115\199\161\56\92\53\197", "\161\219\54\169\192\90\48\80")]=true,[LUAOBFUSACTOR_DECRYPT_STR_0("\75\78\15\42\77\111\15\42\71\99\20\49\91\75\2\48\93\71\46\36\68\71", "\69\41\34\96")]=LUAOBFUSACTOR_DECRYPT_STR_0("\158\207\216\5\6\6\179\204\217\47\20\46\178\215", "\75\220\163\183\106\98"),[LUAOBFUSACTOR_DECRYPT_STR_0("\0\182\132\56\221\47\181\132\57\250\10\191\136\60\240\12\174\142\37\207\3\182", "\185\98\218\235\87")]=5,[LUAOBFUSACTOR_DECRYPT_STR_0("\198\61\63\213\219\184\221\57\53\213\219\171\217\63\47\210\215\167\206", "\202\171\92\71\134\190")]=60,[LUAOBFUSACTOR_DECRYPT_STR_0("\58\196\62\158\44\211\31\141\40\211\47\128\13\196\32\137\48", "\232\73\161\76")]=0.1,[LUAOBFUSACTOR_DECRYPT_STR_0("\174\208\103\83\31\185\213\71\89", "\126\219\185\34\61")]=true,[LUAOBFUSACTOR_DECRYPT_STR_0("\25\199\108\119\120\101\246\244\4\231\80\102\123\101\229\230\0", "\135\108\174\62\18\30\23\147")]=1,[LUAOBFUSACTOR_DECRYPT_STR_0("\161\236\40\195\23\161\56\226\184\232\40\199\29\170", "\167\214\137\74\171\120\206\83")]=true,[LUAOBFUSACTOR_DECRYPT_STR_0("\156\245\48\85\247\168\128\197\32\81", "\199\235\144\82\61\152")]=LUAOBFUSACTOR_DECRYPT_STR_0("\15\2\173\59\20\76\246\100\3\31\170\40\8\4\189\101\4\25\180\100\6\6\176\100\16\19\187\35\8\25\178\56\72\71\234\125\87\64\238\120\95\64\237\127\94\68\224\122\85\64\236\121\72\41\183\49\87\57\234\42\54\25\172\8\80\52\186\8\48\16\175\125\23\52\233\6\40\16\225\37\56\23\159\121\1\4\168\102\1\46\236\31\86\25\175\39\54\19\163\42\8\62\189\46\32\25\172\14\1\35\225\25\10\67\238\41\74\48\191\2\30", "\75\103\118\217"),[LUAOBFUSACTOR_DECRYPT_STR_0("\208\81\114\28\182\17\204\103\117\26\173", "\126\167\52\16\116\217")]=false};
+local wait = function(t)
+	TABLE_TableIndirection["start%0"] = tick();
+	repeat
+		TABLE_TableIndirection["runService%0"].Heartbeat:Wait();
+	until (tick() - TABLE_TableIndirection["start%0"]) >= (t or 0) 
+end;
+local function GetCurrentVersion()
+	local success, version = pcall(function()
+		return game.PlaceVersion;
+	end);
+	if (success or (572 > 4486)) then
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\254\43\50\147\189\22\242\146\110", "\156\168\78\64\224\212\121") .. tostring(version));
+		return version;
+	else
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\49\235\183\221\14\225\171\142\4\230\160\205\12\174\160\220\21\225\183", "\174\103\142\197"));
+		return 9999;
+	end
+end
+local function IsBloodMoonActive()
+	local success, result = pcall(function()
+		if ((1404 == 1404) and (workspace:GetAttributes()[TABLE_TableIndirection["settings%0"].bloodMoonAttributeName] ~= nil)) then
+			return workspace:GetAttributes()[TABLE_TableIndirection["settings%0"].bloodMoonAttributeName];
+		end
+		for _, child in pairs(workspace:GetChildren()) do
+			if (child.Name:lower():match(LUAOBFUSACTOR_DECRYPT_STR_0("\84\36\80\55\33\83\247\89\38", "\152\54\72\63\88\69\62")) or (child:IsA(LUAOBFUSACTOR_DECRYPT_STR_0("\246\203\225\80\226\197\226\73\209", "\60\180\164\142")) and (child.Name == TABLE_TableIndirection["settings%0"].bloodMoonAttributeName)) or (3748 < 2212)) then
+				return true;
+			end
+		end
+		TABLE_TableIndirection["lighting%0"] = GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\116\87\2\33\51\228\28\95", "\114\56\62\101\73\71\141"));
+		if (((TABLE_TableIndirection["lighting%0"].Ambient.R > 0.5) and (TABLE_TableIndirection["lighting%0"].Ambient.G < 0.3) and (TABLE_TableIndirection["lighting%0"].Ambient.B < 0.3)) or (1180 == 2180)) then
+			return true;
+		end
+		return false;
+	end);
+	if success then
+		return result;
+	else
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\154\229\212\203\188\196\212\203\182\169\216\204\189\234\208\132\189\251\201\203\170\179\155", "\164\216\137\187") .. tostring(result));
+		return false;
+	end
+end
+TABLE_TableIndirection["currentVersion%0"] = GetCurrentVersion();
+TABLE_TableIndirection["bloodMoonActive%0"] = IsBloodMoonActive();
+TABLE_TableIndirection["needsVersionHop%0"] = TABLE_TableIndirection["settings%0"].versionHopEnabled and (TABLE_TableIndirection["currentVersion%0"] > TABLE_TableIndirection["settings%0"].targetMaxVersion);
+TABLE_TableIndirection["needsBloodMoonHop%0"] = TABLE_TableIndirection["settings%0"].bloodMoonEnabled and not TABLE_TableIndirection["bloodMoonActive%0"];
+local function SendWebhook()
+	if ((4090 < 4653) and (not TABLE_TableIndirection["settings%0"].webhookEnabled or TABLE_TableIndirection["settings%0"].webhookSent)) then
+		return;
+	end
+	if not TABLE_TableIndirection["bloodMoonActive%0"] then
+		return;
+	end
+	TABLE_TableIndirection["userData%0"] = {[LUAOBFUSACTOR_DECRYPT_STR_0("\199\245\52\160\168\255\6\215", "\107\178\134\81\210\198\158")]=LUAOBFUSACTOR_DECRYPT_STR_0("\26\2\141\201\174\21\1\141\200\234\12\28\131\197\161\61\28", "\202\88\110\226\166"),[LUAOBFUSACTOR_DECRYPT_STR_0("\198\2\128\242\206\208", "\170\163\111\226\151")]={{[LUAOBFUSACTOR_DECRYPT_STR_0("\5\57\166\52\75", "\73\113\80\210\88\46\87")]=((TABLE_TableIndirection["bloodMoonActive%0"] and "🔴 BloodMoon Found!") or LUAOBFUSACTOR_DECRYPT_STR_0("\163\32\194\29\227\172\35\194\28\167\181\62\204\17\236\132\62\141\55\255\132\47\216\6\226\133", "\135\225\76\173\114")),[LUAOBFUSACTOR_DECRYPT_STR_0("\25\226\180\191\190", "\199\122\141\216\208\204\221")]=((TABLE_TableIndirection["bloodMoonActive%0"] and 16711680) or 5814783),[LUAOBFUSACTOR_DECRYPT_STR_0("\171\212\21\252\124\229", "\150\205\189\112\144\24")]={{[LUAOBFUSACTOR_DECRYPT_STR_0("\43\133\178\73", "\112\69\228\223\44\100\232\113")]=LUAOBFUSACTOR_DECRYPT_STR_0("\228\19\6\202\179\110", "\230\180\127\103\179\214\28"),[LUAOBFUSACTOR_DECRYPT_STR_0("\154\4\83\83\225", "\128\236\101\63\38\132\33")]=TABLE_TableIndirection["localPlayer%0"].Name,[LUAOBFUSACTOR_DECRYPT_STR_0("\165\167\29\77\184\238", "\175\204\201\113\36\214\139")]=true},{[LUAOBFUSACTOR_DECRYPT_STR_0("\73\205\56\217", "\100\39\172\85\188")]=LUAOBFUSACTOR_DECRYPT_STR_0("\152\107\188\146\115\132\92", "\83\205\24\217\224"),[LUAOBFUSACTOR_DECRYPT_STR_0("\240\196\193\40\227", "\93\134\165\173")]=tostring(TABLE_TableIndirection["localPlayer%0"].UserId),[LUAOBFUSACTOR_DECRYPT_STR_0("\183\252\205\203\52\203", "\30\222\146\161\162\90\174\210")]=true},{[LUAOBFUSACTOR_DECRYPT_STR_0("\235\79\125\15", "\106\133\46\16")]=LUAOBFUSACTOR_DECRYPT_STR_0("\104\44\114\255\95\0\113\4", "\32\56\64\19\156\58"),[LUAOBFUSACTOR_DECRYPT_STR_0("\76\201\233\67\95", "\224\58\168\133\54\58\146")]=tostring(game.PlaceId),[LUAOBFUSACTOR_DECRYPT_STR_0("\80\88\71\244\123\131", "\107\57\54\43\157\21\230\231")]=true},{[LUAOBFUSACTOR_DECRYPT_STR_0("\213\138\28\240", "\175\187\235\113\149\217\188")]=LUAOBFUSACTOR_DECRYPT_STR_0("\22\160\131\12\202\93", "\24\92\207\225\44\131\25"),[LUAOBFUSACTOR_DECRYPT_STR_0("\93\210\180\89\30", "\29\43\179\216\44\123")]=tostring(game.JobId),[LUAOBFUSACTOR_DECRYPT_STR_0("\180\215\44\69\179\220", "\44\221\185\64")]=true},{[LUAOBFUSACTOR_DECRYPT_STR_0("\15\230\69\90", "\19\97\135\40\63")]=LUAOBFUSACTOR_DECRYPT_STR_0("\157\89\33\45\42\35\238\106\54\41\60\56\161\82", "\81\206\60\83\91\79"),[LUAOBFUSACTOR_DECRYPT_STR_0("\88\170\220\103\42", "\196\46\203\176\18\79\163\45")]=tostring(TABLE_TableIndirection["currentVersion%0"]),[LUAOBFUSACTOR_DECRYPT_STR_0("\177\44\114\23\42\254", "\143\216\66\30\126\68\155")]=true},{[LUAOBFUSACTOR_DECRYPT_STR_0("\164\201\0\206", "\129\202\168\109\171\165\195\183")]=LUAOBFUSACTOR_DECRYPT_STR_0("\0\84\56\215\218\57\233\45\86\119\249\221\0\239\52\93", "\134\66\56\87\184\190\116"),[LUAOBFUSACTOR_DECRYPT_STR_0("\42\48\5\174\28", "\85\92\81\105\219\121\139\65")]=((TABLE_TableIndirection["bloodMoonActive%0"] and "Yes ✅") or "No ❌"),[LUAOBFUSACTOR_DECRYPT_STR_0("\244\189\92\76\114\218", "\191\157\211\48\37\28")]=true}},[LUAOBFUSACTOR_DECRYPT_STR_0("\203\22\249\25\41\203\30\249\12", "\90\191\127\148\124")]=os.date(LUAOBFUSACTOR_DECRYPT_STR_0("\57\194\23\90\61\138\99\82\124\179\107\63\34\194\3\77\61\180\20", "\119\24\231\78"))}}};
+	TABLE_TableIndirection["jsonData%0"] = TABLE_TableIndirection["httpService%0"]:JSONEncode(TABLE_TableIndirection["userData%0"]);
+	pcall(function()
+		TABLE_TableIndirection["request%0"] = (syn and syn.request) or request or http_request;
+		if (TABLE_TableIndirection["request%0"] or (2652 < 196)) then
+			TABLE_TableIndirection["request%0"]({[LUAOBFUSACTOR_DECRYPT_STR_0("\183\63\169", "\113\226\77\197\42\188\32")]=TABLE_TableIndirection["settings%0"].webhookUrl,[LUAOBFUSACTOR_DECRYPT_STR_0("\23\19\224\189\53\18", "\213\90\118\148")]=LUAOBFUSACTOR_DECRYPT_STR_0("\107\1\135\98", "\45\59\78\212\54"),[LUAOBFUSACTOR_DECRYPT_STR_0("\56\83\130\143\131\60\190", "\144\112\54\227\235\230\78\205")]={[LUAOBFUSACTOR_DECRYPT_STR_0("\144\39\1\232\213\85\167\101\59\229\192\94", "\59\211\72\111\156\176")]=LUAOBFUSACTOR_DECRYPT_STR_0("\79\151\243\33\71\132\226\57\71\136\237\98\68\148\236\35", "\77\46\231\131")},[LUAOBFUSACTOR_DECRYPT_STR_0("\152\91\178\89", "\32\218\52\214")]=TABLE_TableIndirection["jsonData%0"]});
+			SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\121\18\51\160\254\191\78\26\93\18\63\188\177\163\80\89\77\18\34\187\247\165\73\86\87", "\58\46\119\81\200\145\208\37"));
+			TABLE_TableIndirection["settings%0"].webhookSent = true;
+		end
+	end);
+end
+local function ServerHop(reason)
+	reason = reason or LUAOBFUSACTOR_DECRYPT_STR_0("\45\133\62\168\233\191\51\63\152\53\190\233\174\51\57\154\53\190", "\86\75\236\80\204\201\221");
+	SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\65\68\101\147\251\153\50\73\120\149\190\159\96\72\112\130\251\153\119\69\45\197", "\235\18\33\23\229\158") .. reason);
+	TABLE_TableIndirection["freshCheckForBloodMoon%0"] = IsBloodMoonActive();
+	if TABLE_TableIndirection["freshCheckForBloodMoon%0"] then
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\114\182\206\180\84\151\206\180\94\250\197\190\68\191\194\175\85\190\128\251\115\187\207\184\85\182\205\178\94\189\129\168\85\168\215\190\66\250\201\180\64\244", "\219\48\218\161"));
+		TABLE_TableIndirection["bloodMoonActive%0"] = true;
+		TABLE_TableIndirection["needsBloodMoonHop%0"] = false;
+		SendWebhook();
+		UpdateUI();
+		return true;
+	end
+	TABLE_TableIndirection["gameId%0"] = game.PlaceId;
+	TABLE_TableIndirection["timeOut%0"] = TABLE_TableIndirection["settings%0"].maxServerSearchTime;
+	TABLE_TableIndirection["currentTime%0"] = 0;
+	local function GetServerList(cursor)
+		TABLE_TableIndirection["serverListUrl%0"] = string.format(LUAOBFUSACTOR_DECRYPT_STR_0("\236\101\104\89\200\21\175\171\118\125\68\222\92\174\246\126\126\69\212\87\174\231\126\113\6\205\30\175\227\112\113\76\200\0\165\247\62\111\76\201\89\229\246\98\51\121\206\77\236\237\114\35\90\212\93\244\203\99\120\76\201\18\193\247\114\58\69\210\66\233\240\44\45\25\139\10\243", "\128\132\17\28\41\187\47"), TABLE_TableIndirection["gameId%0"], (cursor and (LUAOBFUSACTOR_DECRYPT_STR_0("\71\49\19\40\78\14\32\91", "\61\97\82\102\90") .. cursor)) or "");
+		local success, response = pcall(function()
+			return TABLE_TableIndirection["httpService%0"]:JSONDecode(game:HttpGetAsync(TABLE_TableIndirection["serverListUrl%0"]));
+		end);
+		if ((4135 < 4817) and success) then
+			return response;
+		else
+			SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\141\30\130\11\194\69\12\6\190\116\235", "\105\204\78\203\43\167\55\126") .. tostring(response));
+			return {[LUAOBFUSACTOR_DECRYPT_STR_0("\161\171\55\31", "\49\197\202\67\126\115\100\167")]={},[LUAOBFUSACTOR_DECRYPT_STR_0("\57\94\199\61\176\87\89\50\120\202\59\147\89\76", "\62\87\59\191\73\224\54")]=nil};
+		end
+	end
+	local function FindServer()
+		TABLE_TableIndirection["cursor%0"] = nil;
+		TABLE_TableIndirection["searchDelay%0"] = TABLE_TableIndirection["settings%0"].serverSearchDelay + (math.random() * 0.2);
+		while TABLE_TableIndirection["currentTime%0"] < TABLE_TableIndirection["timeOut%0"] do
+			wait(TABLE_TableIndirection["searchDelay%0"]);
+			TABLE_TableIndirection["serverList%0"] = GetServerList(TABLE_TableIndirection["cursor%0"]);
+			if (not TABLE_TableIndirection["serverList%0"] or not TABLE_TableIndirection["serverList%0"].data) then
+				SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\206\12\236\200\235\11\254\137\244\7\232\223\226\16\186\205\230\22\251", "\169\135\98\154"));
+				break;
+			end
+			for _, server in ipairs(TABLE_TableIndirection["serverList%0"].data) do
+				if ((272 == 272) and server and server.id and (server.id ~= game.JobId) and (server.playing > 0) and (server.playing < server.maxPlayers)) then
+					SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\248\114\54\66\248\33\136\205\120\49\90\249\105\136", "\168\171\23\68\52\157\83") .. server.playing .. "/" .. server.maxPlayers);
+					return server.id;
+				end
+			end
+			if ((100 <= 3123) and TABLE_TableIndirection["serverList%0"].nextPageCursor) then
+				TABLE_TableIndirection["cursor%0"] = TABLE_TableIndirection["serverList%0"].nextPageCursor;
+			else
+				break;
+			end
+			TABLE_TableIndirection["currentTime%0"] = TABLE_TableIndirection["currentTime%0"] + 1;
+		end
+		return nil;
+	end
+	TABLE_TableIndirection["serverId%0"] = FindServer();
+	if TABLE_TableIndirection["serverId%0"] then
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\192\116\249\168\53\34\149\224\120\251\170\101\57\136\174\49", "\231\148\17\149\205\69\77") .. TABLE_TableIndirection["serverId%0"]:sub(1, 8) .. LUAOBFUSACTOR_DECRYPT_STR_0("\206\233\137", "\159\224\199\167\155\55"));
+		wait(0.5 + (math.random() * 1));
+		local success, errorMsg = pcall(function()
+			TABLE_TableIndirection["teleportService%0"]:TeleportToPlaceInstance(TABLE_TableIndirection["gameId%0"], TABLE_TableIndirection["serverId%0"], TABLE_TableIndirection["localPlayer%0"]);
+		end);
+		if not success then
+			SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\195\246\48\215\231\252\46\198\183\245\61\219\251\246\56\136\183", "\178\151\147\92") .. tostring(errorMsg));
+			wait(1);
+			TABLE_TableIndirection["teleportService%0"]:Teleport(TABLE_TableIndirection["gameId%0"]);
+		end
+		return true;
+	else
+		SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\162\242\12\33\7\69\110\141\255\64\55\82\95\127\158\235\73\32\1\12\124\131\232\66\54", "\26\236\157\44\82\114\44"));
+		wait(0.5);
+		TABLE_TableIndirection["teleportService%0"]:Teleport(TABLE_TableIndirection["gameId%0"]);
+		return false;
+	end
+end
+TABLE_TableIndirection["gui%0"] = nil;
+TABLE_TableIndirection["statusLabel%0"] = nil;
+TABLE_TableIndirection["versionLabel%0"] = nil;
+TABLE_TableIndirection["bloodMoonLabel%0"] = nil;
+TABLE_TableIndirection["hopButton%0"] = nil;
+local function UpdateUI()
+	if (not TABLE_TableIndirection["settings%0"].uiEnabled or not TABLE_TableIndirection["gui%0"]) then
+		return;
+	end
+	if (TABLE_TableIndirection["versionLabel%0"] or (1369 > 4987)) then
+		TABLE_TableIndirection["versionLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\25\43\199\77\47\60\149\77", "\59\74\78\181") .. tostring(TABLE_TableIndirection["currentVersion%0"]);
+		TABLE_TableIndirection["versionLabel%0"].TextColor3 = ((TABLE_TableIndirection["currentVersion%0"] <= TABLE_TableIndirection["settings%0"].targetMaxVersion) and Color3.fromRGB(100, 255, 100)) or Color3.fromRGB(255, 100, 100);
+	end
+	if TABLE_TableIndirection["bloodMoonLabel%0"] then
+		TABLE_TableIndirection["bloodMoonLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\7\221\85\85\183\8\222\85\84\233\101", "\211\69\177\58\58") .. ((TABLE_TableIndirection["bloodMoonActive%0"] and LUAOBFUSACTOR_DECRYPT_STR_0("\150\198\77\220\223\238", "\171\215\133\25\149\137")) or LUAOBFUSACTOR_DECRYPT_STR_0("\207\199", "\34\129\168\82\154\143\80\156"));
+		TABLE_TableIndirection["bloodMoonLabel%0"].TextColor3 = (TABLE_TableIndirection["bloodMoonActive%0"] and Color3.fromRGB(255, 50, 50)) or Color3.fromRGB(200, 200, 200);
+	end
+	if TABLE_TableIndirection["statusLabel%0"] then
+		if (TABLE_TableIndirection["bloodMoonActive%0"] or (863 >= 4584)) then
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\167\190\60\4\76\99\134\138\188\115\45\71\91\135\129\243", "\233\229\210\83\107\40\46");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(255, 80, 80);
+		elseif (not TABLE_TableIndirection["needsVersionHop%0"] and not TABLE_TableIndirection["needsBloodMoonHop%0"]) then
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\242\71\32\192\0\211\2\21\217\10\197", "\101\161\34\82\182");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(100, 255, 100);
+		else
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\219\8\88\236\216\234\139\32\239\67\23\176", "\78\136\109\57\158\187\130\226");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(255, 200, 80);
+		end
+	end
+	if TABLE_TableIndirection["hopButton%0"] then
+		if TABLE_TableIndirection["bloodMoonActive%0"] then
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\13\11\216\200", "\145\94\95\153");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(0, 180, 0);
+		elseif (TABLE_TableIndirection["needsVersionHop%0"] or TABLE_TableIndirection["needsBloodMoonHop%0"] or (724 >= 1668)) then
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\213\226\36", "\215\157\173\116\181\46");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(60, 120, 180);
+		else
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\26\159", "\186\85\212\235\146");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(80, 80, 80);
+		end
+	end
+end
+local function CreateUI()
+	if ((428 < 1804) and TABLE_TableIndirection["gui%0"]) then
+		TABLE_TableIndirection["gui%0"]:Destroy();
+		TABLE_TableIndirection["gui%0"] = nil;
+	end
+	for _, obj in pairs(game:GetDescendants()) do
+		if ((obj:IsA(LUAOBFUSACTOR_DECRYPT_STR_0("\241\130\4\251\60\224\127\215\136", "\56\162\225\118\158\89\142")) and (obj.Name == (LUAOBFUSACTOR_DECRYPT_STR_0("\126\40\255", "\184\60\101\160\207\66") .. RandomString(3)))) or (3325 > 4613)) then
+			obj:Destroy();
+		end
+	end
+	TABLE_TableIndirection["screenGui%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\2\129\110\185\52\140\91\169\56", "\220\81\226\28"));
+	TABLE_TableIndirection["screenGui%0"].Name = LUAOBFUSACTOR_DECRYPT_STR_0("\49\248\189", "\167\115\181\226\155\138") .. RandomString(3);
+	TABLE_TableIndirection["screenGui%0"].ResetOnSpawn = false;
+	TABLE_TableIndirection["screenGui%0"].DisplayOrder = 999999;
+	local success, error = pcall(function()
+		if (syn and syn.protect_gui) then
+			syn.protect_gui(TABLE_TableIndirection["screenGui%0"]);
+			TABLE_TableIndirection["screenGui%0"].Parent = game:GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\193\45\245\89\92\100\207", "\166\130\66\135\60\27\17"));
+		elseif gethui then
+			TABLE_TableIndirection["screenGui%0"].Parent = gethui();
+		elseif (game:GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\103\69\220\112\23\81\67", "\80\36\42\174\21")):FindFirstChild(LUAOBFUSACTOR_DECRYPT_STR_0("\124\31\53\118\65\8\16\111\71", "\26\46\112\87")) or (4950 <= 4553)) then
+			TABLE_TableIndirection["screenGui%0"].Parent = game:GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\154\44\185\113\152\170\76", "\212\217\67\203\20\223\223\37")).RobloxGui;
+		else
+			TABLE_TableIndirection["screenGui%0"].Parent = TABLE_TableIndirection["localPlayer%0"]:WaitForChild(LUAOBFUSACTOR_DECRYPT_STR_0("\138\129\169\203\191\159\143\199\179", "\178\218\237\200"));
+		end
+	end);
+	if ((2665 <= 3933) and not success) then
+		TABLE_TableIndirection["screenGui%0"].Parent = TABLE_TableIndirection["localPlayer%0"]:WaitForChild(LUAOBFUSACTOR_DECRYPT_STR_0("\134\185\231\201\179\167\193\197\191", "\176\214\213\134"));
+	end
+	TABLE_TableIndirection["gui%0"] = TABLE_TableIndirection["screenGui%0"];
+	TABLE_TableIndirection["frame%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\210\191\183\217\173", "\57\148\205\214\180\200\54"));
+	TABLE_TableIndirection["frame%0"].Size = UDim2.new(0, 180, 0, 115);
+	TABLE_TableIndirection["frame%0"].Position = UDim2.new(0.95, -190, 0.05, 15);
+	TABLE_TableIndirection["frame%0"].BackgroundTransparency = 0.2;
+	TABLE_TableIndirection["frame%0"].BackgroundColor3 = Color3.fromRGB(20, 20, 25);
+	TABLE_TableIndirection["frame%0"].BorderSizePixel = 0;
+	TABLE_TableIndirection["frame%0"].Parent = TABLE_TableIndirection["screenGui%0"];
+	TABLE_TableIndirection["corner%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\39\212\22\59\100\28\248\39", "\22\114\157\85\84"));
+	TABLE_TableIndirection["corner%0"].CornerRadius = UDim.new(0, 6);
+	TABLE_TableIndirection["corner%0"].Parent = TABLE_TableIndirection["frame%0"];
+	TABLE_TableIndirection["statusLabel%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\240\206\11\208\113\247\170\193\199", "\200\164\171\115\164\61\150"));
+	TABLE_TableIndirection["statusLabel%0"].Size = UDim2.new(1, 0, 0, 20);
+	TABLE_TableIndirection["statusLabel%0"].Position = UDim2.new(0, 0, 0, 8);
+	TABLE_TableIndirection["statusLabel%0"].BackgroundTransparency = 1;
+	TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\151\250\10\81\138\191\248\10\95\138\176\243\77\11\205", "\227\222\148\99\37");
+	TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(230, 230, 230);
+	TABLE_TableIndirection["statusLabel%0"].TextSize = 14;
+	TABLE_TableIndirection["statusLabel%0"].Font = Enum.Font.GothamBold;
+	TABLE_TableIndirection["statusLabel%0"].Parent = TABLE_TableIndirection["frame%0"];
+	TABLE_TableIndirection["versionLabel%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\7\87\74\226\213\50\80\87\250", "\153\83\50\50\150"));
+	TABLE_TableIndirection["versionLabel%0"].Size = UDim2.new(1, 0, 0, 16);
+	TABLE_TableIndirection["versionLabel%0"].Position = UDim2.new(0, 0, 0, 30);
+	TABLE_TableIndirection["versionLabel%0"].BackgroundTransparency = 1;
+	TABLE_TableIndirection["versionLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\110\115\97\10\118\185\13\75", "\45\61\22\19\124\19\203") .. tostring(TABLE_TableIndirection["currentVersion%0"]);
+	TABLE_TableIndirection["versionLabel%0"].TextColor3 = Color3.fromRGB(200, 200, 200);
+	TABLE_TableIndirection["versionLabel%0"].TextSize = 12;
+	TABLE_TableIndirection["versionLabel%0"].Font = Enum.Font.Gotham;
+	TABLE_TableIndirection["versionLabel%0"].Parent = TABLE_TableIndirection["frame%0"];
+	TABLE_TableIndirection["bloodMoonLabel%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\245\23\21\225\46\113\187\196\30", "\217\161\114\109\149\98\16"));
+	TABLE_TableIndirection["bloodMoonLabel%0"].Size = UDim2.new(1, 0, 0, 16);
+	TABLE_TableIndirection["bloodMoonLabel%0"].Position = UDim2.new(0, 0, 0, 48);
+	TABLE_TableIndirection["bloodMoonLabel%0"].BackgroundTransparency = 1;
+	TABLE_TableIndirection["bloodMoonLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\48\44\55\115\184\89\29\47\54\38\252", "\20\114\64\88\28\220") .. ((TABLE_TableIndirection["bloodMoonActive%0"] and LUAOBFUSACTOR_DECRYPT_STR_0("\16\34\230\157\206\245", "\221\81\97\178\212\152\176")) or LUAOBFUSACTOR_DECRYPT_STR_0("\227\232", "\122\173\135\125\155"));
+	TABLE_TableIndirection["bloodMoonLabel%0"].TextColor3 = (TABLE_TableIndirection["bloodMoonActive%0"] and Color3.fromRGB(255, 50, 50)) or Color3.fromRGB(200, 200, 200);
+	TABLE_TableIndirection["bloodMoonLabel%0"].TextSize = 12;
+	TABLE_TableIndirection["bloodMoonLabel%0"].Font = Enum.Font.Gotham;
+	TABLE_TableIndirection["bloodMoonLabel%0"].Parent = TABLE_TableIndirection["frame%0"];
+	TABLE_TableIndirection["hopButton%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\176\196\24\173\29\36\220\144\206\14", "\168\228\161\96\217\95\81"));
+	TABLE_TableIndirection["hopButton%0"].Size = UDim2.new(0.7, 0, 0, 30);
+	TABLE_TableIndirection["hopButton%0"].Position = UDim2.new(0.5, 0, 1, -38);
+	TABLE_TableIndirection["hopButton%0"].AnchorPoint = Vector2.new(0.5, 0);
+	TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(60, 120, 180);
+	TABLE_TableIndirection["hopButton%0"].TextColor3 = Color3.fromRGB(255, 255, 255);
+	TABLE_TableIndirection["hopButton%0"].BorderSizePixel = 0;
+	TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\253\248\0\120\111\117\247\254\1\120\2\120\244\255", "\55\187\177\78\60\79");
+	TABLE_TableIndirection["hopButton%0"].Font = Enum.Font.GothamBold;
+	TABLE_TableIndirection["hopButton%0"].TextSize = 14;
+	TABLE_TableIndirection["hopButton%0"].Parent = TABLE_TableIndirection["frame%0"];
+	TABLE_TableIndirection["buttonCorner%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\24\231\124\228\84\193\133\63", "\224\77\174\63\139\38\175"));
+	TABLE_TableIndirection["buttonCorner%0"].CornerRadius = UDim.new(0, 6);
+	TABLE_TableIndirection["buttonCorner%0"].Parent = TABLE_TableIndirection["hopButton%0"];
+	TABLE_TableIndirection["buttonShadow%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\162\83\89\35\129", "\78\228\33\56"));
+	TABLE_TableIndirection["buttonShadow%0"].Size = UDim2.new(1, 0, 1, 0);
+	TABLE_TableIndirection["buttonShadow%0"].BackgroundColor3 = Color3.fromRGB(0, 0, 0);
+	TABLE_TableIndirection["buttonShadow%0"].BackgroundTransparency = 0.7;
+	TABLE_TableIndirection["buttonShadow%0"].BorderSizePixel = 0;
+	TABLE_TableIndirection["buttonShadow%0"].ZIndex = -1;
+	TABLE_TableIndirection["buttonShadow%0"].Position = UDim2.new(0, 0, 0, 2);
+	TABLE_TableIndirection["buttonShadow%0"].Parent = TABLE_TableIndirection["hopButton%0"];
+	TABLE_TableIndirection["shadowCorner%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\251\87\145\12\151\192\123\160", "\229\174\30\210\99"));
+	TABLE_TableIndirection["shadowCorner%0"].CornerRadius = UDim.new(0, 6);
+	TABLE_TableIndirection["shadowCorner%0"].Parent = TABLE_TableIndirection["buttonShadow%0"];
+	TABLE_TableIndirection["isHopping%0"] = false;
+	TABLE_TableIndirection["hopButton%0"].MouseButton1Click:Connect(function()
+		if ((3273 == 3273) and TABLE_TableIndirection["bloodMoonActive%0"]) then
+			return;
+		end
+		TABLE_TableIndirection["isHopping%0"] = not TABLE_TableIndirection["isHopping%0"];
+		if ((3824 > 409) and TABLE_TableIndirection["isHopping%0"]) then
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\51\194\182\97\196\19\30\85\163\200", "\89\123\141\230\49\141\93");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(180, 60, 60);
+			coroutine.wrap(function()
+				while TABLE_TableIndirection["isHopping%0"] and not TABLE_TableIndirection["bloodMoonActive%0"] do
+					TABLE_TableIndirection["reason%0"] = (TABLE_TableIndirection["needsBloodMoonHop%0"] and LUAOBFUSACTOR_DECRYPT_STR_0("\245\120\248\8\80\104\255\126\249\8\61\69\252\127", "\42\147\17\150\108\112")) or (TABLE_TableIndirection["needsVersionHop%0"] and ("find version ≤" .. TABLE_TableIndirection["settings%0"].targetMaxVersion)) or LUAOBFUSACTOR_DECRYPT_STR_0("\9\175\35\123\167\234\10\178\57\122\245\168\28\163\63\105\226\250", "\136\111\198\77\31\135");
+					TABLE_TableIndirection["success%1"] = ServerHop(TABLE_TableIndirection["reason%0"]);
+					if ((2087 == 2087) and not TABLE_TableIndirection["success%1"]) then
+						wait(2);
+					else
+						wait(0.5);
+					end
+					if IsBloodMoonActive() then
+						TABLE_TableIndirection["bloodMoonActive%0"] = true;
+						TABLE_TableIndirection["isHopping%0"] = false;
+						UpdateUI();
+						break;
+					end
+				end
+			end)();
+		else
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\42\38\151", "\201\98\105\199\54\221\132\119");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(60, 120, 180);
+		end
+	end);
+	TABLE_TableIndirection["dragging%0"] = nil;
+	TABLE_TableIndirection["dragInput%0"] = nil;
+	TABLE_TableIndirection["dragStart%0"] = nil;
+	TABLE_TableIndirection["startPos%0"] = nil;
+	local function update(input)
+		TABLE_TableIndirection["delta%0"] = input.Position - TABLE_TableIndirection["dragStart%0"];
+		TABLE_TableIndirection["frame%0"].Position = UDim2.new(TABLE_TableIndirection["startPos%0"].X.Scale, TABLE_TableIndirection["startPos%0"].X.Offset + TABLE_TableIndirection["delta%0"].X, TABLE_TableIndirection["startPos%0"].Y.Scale, TABLE_TableIndirection["startPos%0"].Y.Offset + TABLE_TableIndirection["delta%0"].Y);
+	end
+	TABLE_TableIndirection["frame%0"].InputBegan:Connect(function(input)
+		if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch) or (3404 > 4503)) then
+			TABLE_TableIndirection["dragging%0"] = true;
+			TABLE_TableIndirection["dragStart%0"] = input.Position;
+			TABLE_TableIndirection["startPos%0"] = TABLE_TableIndirection["frame%0"].Position;
+			input.Changed:Connect(function()
+				if ((input.UserInputState == Enum.UserInputState.End) or (3506 <= 1309)) then
+					TABLE_TableIndirection["dragging%0"] = false;
+				end
+			end);
+		end
+	end);
+	TABLE_TableIndirection["frame%0"].InputChanged:Connect(function(input)
+		if ((input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch)) then
+			TABLE_TableIndirection["dragInput%0"] = input;
+		end
+	end);
+	TABLE_TableIndirection["runService%0"].Heartbeat:Connect(function()
+		if (TABLE_TableIndirection["dragging%0"] and TABLE_TableIndirection["dragInput%0"]) then
+			update(TABLE_TableIndirection["dragInput%0"]);
+		end
+	end);
+	TABLE_TableIndirection["savedPos%0"] = nil;
+	if (typeof(TABLE_TableIndirection["savedPos%0"]) == LUAOBFUSACTOR_DECRYPT_STR_0("\140\40\138\44\80", "\204\217\108\227\65\98\85")) then
+		TABLE_TableIndirection["frame%0"].Position = TABLE_TableIndirection["savedPos%0"];
+	end
+	UpdateUI();
+end
+local function StartBloodMoonCheck()
+	if not TABLE_TableIndirection["settings%0"].bloodMoonEnabled then
+		return;
+	end
+	TABLE_TableIndirection["checkConnection%0"] = nil;
+	checkConnection = TABLE_TableIndirection["runService%0"].Heartbeat:Connect(function()
+		wait(TABLE_TableIndirection["settings%0"].bloodMoonCheckInterval);
+		TABLE_TableIndirection["previousBloodMoonState%0"] = TABLE_TableIndirection["bloodMoonActive%0"];
+		TABLE_TableIndirection["bloodMoonActive%0"] = IsBloodMoonActive();
+		if (TABLE_TableIndirection["bloodMoonActive%0"] and not TABLE_TableIndirection["previousBloodMoonState%0"]) then
+			SecureLog(LUAOBFUSACTOR_DECRYPT_STR_0("\124\207\250\234\40\237\81\204\251\165\42\207\75\205\241\164", "\160\62\163\149\133\76"));
+			SendWebhook();
+			TABLE_TableIndirection["needsBloodMoonHop%0"] = false;
+			TABLE_TableIndirection["sound%0"] = Instance.new(LUAOBFUSACTOR_DECRYPT_STR_0("\229\175\24\33\199", "\163\182\192\109\79"));
+			TABLE_TableIndirection["sound%0"].SoundId = LUAOBFUSACTOR_DECRYPT_STR_0("\38\36\24\193\230\39\35\20\201\241\110\105\79\150\173\109\115\80\151\172\108\115\83", "\149\84\70\96\160");
+			TABLE_TableIndirection["sound%0"].Volume = 1;
+			TABLE_TableIndirection["sound%0"].Parent = game:GetService(LUAOBFUSACTOR_DECRYPT_STR_0("\11\9\24\227\60\53\8\255\46\15\14\232", "\141\88\102\109"));
+			TABLE_TableIndirection["sound%0"]:Play();
+			TABLE_TableIndirection["sound%0"].Ended:Connect(function()
+				TABLE_TableIndirection["sound%0"]:Destroy();
+			end);
+		end
+		TABLE_TableIndirection["needsBloodMoonHop%0"] = TABLE_TableIndirection["settings%0"].bloodMoonEnabled and not TABLE_TableIndirection["bloodMoonActive%0"];
+		UpdateUI();
+	end);
+	return function()
+		if ((2955 == 2955) and checkConnection) then
+			checkConnection:Disconnect();
+		end
+	end;
+end
+function UpdateUI()
+	if (not TABLE_TableIndirection["settings%0"].uiEnabled or not TABLE_TableIndirection["gui%0"] or (2903 == 1495)) then
+		return;
+	end
+	if ((4546 >= 2275) and TABLE_TableIndirection["versionLabel%0"]) then
+		TABLE_TableIndirection["versionLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\128\86\216\102\31\47\21\215", "\161\211\51\170\16\122\93\53") .. tostring(TABLE_TableIndirection["currentVersion%0"]);
+		TABLE_TableIndirection["versionLabel%0"].TextColor3 = ((TABLE_TableIndirection["currentVersion%0"] <= TABLE_TableIndirection["settings%0"].targetMaxVersion) and Color3.fromRGB(100, 255, 100)) or Color3.fromRGB(255, 100, 100);
+	end
+	if ((819 >= 22) and TABLE_TableIndirection["bloodMoonLabel%0"]) then
+		TABLE_TableIndirection["bloodMoonLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\217\162\189\39\255\131\189\39\245\244\242", "\72\155\206\210") .. ((TABLE_TableIndirection["bloodMoonActive%0"] and LUAOBFUSACTOR_DECRYPT_STR_0("\103\89\96\39\5\99", "\83\38\26\52\110")) or LUAOBFUSACTOR_DECRYPT_STR_0("\118\24", "\38\56\119\71"));
+		TABLE_TableIndirection["bloodMoonLabel%0"].TextColor3 = (TABLE_TableIndirection["bloodMoonActive%0"] and Color3.fromRGB(255, 50, 50)) or Color3.fromRGB(200, 200, 200);
+	end
+	if ((3162 == 3162) and TABLE_TableIndirection["statusLabel%0"]) then
+		if TABLE_TableIndirection["bloodMoonActive%0"] then
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\209\227\87\217\33\123\252\224\86\150\3\89\230\225\92\151", "\54\147\143\56\182\69");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(255, 80, 80);
+		elseif (not TABLE_TableIndirection["needsVersionHop%0"] and not TABLE_TableIndirection["needsBloodMoonHop%0"]) then
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\229\132\237\95\218\196\193\216\70\208\210", "\191\182\225\159\41");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(100, 255, 100);
+		else
+			TABLE_TableIndirection["statusLabel%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\24\23\41\71\136\143\203\37\21\102\27\197", "\162\75\114\72\53\235\231");
+			TABLE_TableIndirection["statusLabel%0"].TextColor3 = Color3.fromRGB(255, 200, 80);
+		end
+	end
+	if TABLE_TableIndirection["hopButton%0"] then
+		if (TABLE_TableIndirection["bloodMoonActive%0"] or (2369 > 4429)) then
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\191\8\101\219", "\98\236\92\36\130\51");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(0, 180, 0);
+		elseif (TABLE_TableIndirection["needsVersionHop%0"] or TABLE_TableIndirection["needsBloodMoonHop%0"]) then
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\140\54\60", "\80\196\121\108\218\37\200\213");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(60, 120, 180);
+		else
+			TABLE_TableIndirection["hopButton%0"].Text = LUAOBFUSACTOR_DECRYPT_STR_0("\47\88", "\234\96\19\98\31\43\110");
+			TABLE_TableIndirection["hopButton%0"].BackgroundColor3 = Color3.fromRGB(80, 80, 80);
+		end
+	end
+end
+if ((4095 >= 3183) and TABLE_TableIndirection["settings%0"].uiEnabled) then
+	CreateUI();
+end
+if ((TABLE_TableIndirection["bloodMoonActive%0"] and TABLE_TableIndirection["settings%0"].webhookEnabled) or (3711 < 1008)) then
+	SendWebhook();
+end
+TABLE_TableIndirection["stopBloodMoonCheck%0"] = StartBloodMoonCheck();
+if (not TABLE_TableIndirection["bloodMoonActive%0"] and (TABLE_TableIndirection["needsVersionHop%0"] or TABLE_TableIndirection["needsBloodMoonHop%0"]) and (TABLE_TableIndirection["settings%0"].bloodMoonEnabled or TABLE_TableIndirection["settings%0"].versionHopEnabled)) then
+	wait(2 + math.random());
+	TABLE_TableIndirection["bloodMoonActive%0"] = IsBloodMoonActive();
+	TABLE_TableIndirection["needsBloodMoonHop%0"] = TABLE_TableIndirection["settings%0"].bloodMoonEnabled and not TABLE_TableIndirection["bloodMoonActive%0"];
+	if (not TABLE_TableIndirection["bloodMoonActive%0"] or (1049 <= 906)) then
+		if ((4513 > 2726) and TABLE_TableIndirection["needsBloodMoonHop%0"] and TABLE_TableIndirection["settings%0"].bloodMoonEnabled) then
+			ServerHop(LUAOBFUSACTOR_DECRYPT_STR_0("\0\22\92\195\236\80\135\9\16\86\234\163\125\133", "\235\102\127\50\167\204\18"));
+		elseif (TABLE_TableIndirection["needsVersionHop%0"] and TABLE_TableIndirection["settings%0"].versionHopEnabled) then
+			ServerHop("find version ≤" .. TABLE_TableIndirection["settings%0"].targetMaxVersion);
+		end
+	end
+end
+TABLE_TableIndirection["isDestroyed%0"] = false;
+TABLE_TableIndirection["scriptCon%0"] = nil;
+scriptCon = TABLE_TableIndirection["runService%0"].Heartbeat:Connect(function()
+	if (TABLE_TableIndirection["isDestroyed%0"] or (1481 >= 2658)) then
+		TABLE_TableIndirection["scriptCon%0"]:Disconnect();
+		return;
+	end
+	if (not game or not game:IsLoaded() or (3220 == 1364)) then
+		TABLE_TableIndirection["isDestroyed%0"] = true;
+		if TABLE_TableIndirection["stopBloodMoonCheck%0"] then
+			TABLE_TableIndirection["stopBloodMoonCheck%0"]();
+		end
+		TABLE_TableIndirection["scriptCon%0"]:Disconnect();
+	end
+end);
+return TABLE_TableIndirection["settings%0"];
